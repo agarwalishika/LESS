@@ -12,7 +12,7 @@ if [[ ! -d $output_dir ]]; then
 fi
 
 # use fsdp for large models
-if [[ $model_path == "meta-llama/Llama-2-13b-hf" ]]; then
+if [[ $model_path == "microsoft/Phi-3-mini-4k-instruct" ]]; then
     base_training_args="$base_training_args --fsdp 'full_shard auto_wrap' --fsdp_config llama2_13b_finetune"
     elif [[ $model_path == "mistralai/Mistral-7B-v0.1" ]]; then
     base_training_args="$base_training_args --fsdp 'full_shard auto_wrap' --fsdp_config mistral_7b_finetune"

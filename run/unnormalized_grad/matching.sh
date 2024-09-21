@@ -27,8 +27,8 @@ python3 -m less.data_selection.write_selected_data \
 export WANDB_MODE="offline"
 task=tydiqa
 TRAIN_FILES=../selected_data/unnormalized_gradients/${task}/top_p0.05.jsonl
-model_path=meta-llama/Llama-2-7b-hf
-job_name=llama2-7b-p0.05_seed${seed}_${task}_unnormalized
+model_path=microsoft/Phi-3-mini-4k-instruct
+job_name=phi-p0.05_seed${seed}_${task}_unnormalized
 output_dir=../out/${job_name}
 sbatch -p cli --gres=gpu:4 --output ../out/slurm/%j-%x.out --job-name $job_name --mem=200g -t 2:00:00 ./less/scripts/train/train.sh "$TRAIN_FILES" "$model_path" "$job_name"
 

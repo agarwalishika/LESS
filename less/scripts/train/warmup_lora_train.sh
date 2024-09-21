@@ -2,7 +2,7 @@
 
 source less/scripts/train/base_training_args.sh
 
-data_dir=$1
+train_files=$1
 model_path=$2
 percentage=$3
 data_seed=$4
@@ -13,17 +13,24 @@ if [[ ! -d $output_dir ]]; then
     mkdir -p $output_dir
 fi
 
-train_files=("$data_dir/train/processed/flan_v2/flan_v2_data.jsonl"
-    "$data_dir/train/processed/cot/cot_data.jsonl"
-    "$data_dir/train/processed/dolly/dolly_data.jsonl"
-"$data_dir/train/processed/oasst1/oasst1_data.jsonl")
+# train_files=("$data_dir/train/processed/dolly/dolly_data2.jsonl")
+# train_files=("$data_dir/train/processed/flan_v2/flan_v2_data2.jsonl"
+#     "$data_dir/train/processed/cot/cot_data2.jsonl"
+#     "$data_dir/train/processed/dolly/dolly_data2.jsonl"
+# "$data_dir/train/processed/oasst1/oasst1_data2.jsonl")
+# train_files=("$data_dir/train/processed/flan_v2/flan_v2_data.jsonl"
+#     "$data_dir/train/processed/cot/cot_data.jsonl"
+#     "$data_dir/train/processed/dolly/dolly_data.jsonl"
+# "$data_dir/train/processed/oasst1/oasst1_data.jsonl")
 
 # use fsdp for large models
-if [[ $model_path == "meta-llama/Llama-2-13b-hf" ]]; then
-    base_training_args="$base_training_args --fsdp 'full_shard auto_wrap' --fsdp_config llama2_13b_finetune"
-    elif [[ $model_path == "mistralai/Mistral-7B-v0.1" ]]; then
-    base_training_args="$base_training_args --fsdp 'full_shard auto_wrap' --fsdp_config mistral_7b_finetune"
-fi
+# if [[ $model_path == "microsoft/Phi-3-mini-4k-instruct" ]]; then
+#     base_training_args="$base_training_args --fsdp 'full_shard auto_wrap' --fsdp_config llama2_13b_finetune"
+    # elif [[ $model_path == "mistralai/Mistral-7B-v0.1" ]]; then
+    # base_training_args="$base_training_args --fsdp 'full_shard auto_wrap' --fsdp_config mistral_7b_finetune"
+# fi
+
+# train_files="llm-blender/mix-instruct"
 
 training_args="$base_training_args \
 --model_name_or_path $model_path \

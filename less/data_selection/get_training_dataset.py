@@ -1,7 +1,8 @@
 import contextlib
 from functools import partial
 from typing import List, Union
-
+import pickle
+from datasets import Dataset
 import numpy as np
 import torch
 from datasets import load_dataset
@@ -18,9 +19,8 @@ def temp_seed(seed):
         np.random.set_state(state)
 
 
-def get_training_dataset(train_files: List[str], tokenizer, max_seq_length, sample_percentage=1.0, seed=0):
+def get_training_dataset(train_files, tokenizer, max_seq_length, sample_percentage=1.0, seed=0):
     """ get training dataset with a specified seed """
-
     raw_datasets = load_raw_dataset(
         train_files, sample_percentage=sample_percentage, seed=seed)
     lm_datasets = encode_data(
@@ -29,15 +29,32 @@ def get_training_dataset(train_files: List[str], tokenizer, max_seq_length, samp
 
 
 def load_raw_dataset(train_files: Union[List[str], str], sample_size=None, sample_percentage=1.0, seed=0):
-    """ load raw dataset """
+    """ load raw dataset """    
     if isinstance(train_files, str):
         train_files = [train_files]
-    processed_datasets = load_dataset(
-        "json",
-        data_files=train_files,
-    )["train"]
+    # processed_datasets = load_dataset(
+    #     "json",
+    #     data_files=train_files,
+    # )["train"]
+
+    def parse_prompt(data): 
+        ind = data.index("Output:")
+        return data[:ind].strip()
+    
+    def parse_completion(data): 
+        ind = data.index("Output:")
+        return data[ind+7:].strip()
+    
+    with open(train_files[0], 'rb') as f:
+        processed_datasets = pickle.load(f)[0]
+    
+    prompts = processed_datasets['data'].map(parse_prompt)
+    completions = processed_datasets['data'].map(parse_completion)
+    processed_datasets['prompt'] = prompts
+    processed_datasets['completion'] = completions
+    
     if sample_size is None:
-        sample_size = int(len(processed_datasets) * sample_percentage)
+        sample_size = max(200, int(len(processed_datasets) * sample_percentage))
 
     if sample_size == len(processed_datasets):
         return processed_datasets  # not shuffle
@@ -45,39 +62,41 @@ def load_raw_dataset(train_files: Union[List[str], str], sample_size=None, sampl
     with temp_seed(seed):
         index = np.random.permutation(len(processed_datasets))[:sample_size]
 
-    sampled_dataset = processed_datasets.select(index)
+    sampled_dataset = processed_datasets.iloc[index]
 
     return sampled_dataset
-
 
 def encode_data(raw_datasets, tokenizer, max_seq_length, processing_num_workers=10, overwrite_cache=False, func_name="encode_with_messages_format"):
     """ encode data with the specified tokenizer and the chat format. """
     # if already encoded, return
-    if "input_ids" in raw_datasets.features:
+    if "input_ids" in raw_datasets.columns:
         return raw_datasets
-    encode_function = get_encode_function(
-        raw_datasets, tokenizer, max_seq_length, func_name)
+    
+    # encode_function = get_encode_function(
+    #     raw_datasets, tokenizer, max_seq_length, func_name)
     # To speed up this part, we use multiprocessing.
-    lm_datasets = raw_datasets.map(
-        encode_function,
-        batched=False,
-        num_proc=processing_num_workers,
-        load_from_cache_file=not overwrite_cache,
-        desc="Tokenizing and reformatting instruction data",
-    )
-    lm_datasets.set_format(type="pt")
+    # lm_datasets = raw_datasets.apply(
+    #     encode_function,
+    #     axis=1
+    #     # batched=False,
+    #     # num_proc=processing_num_workers,
+    #     # load_from_cache_file=not overwrite_cache,
+    #     # desc="Tokenizing and reformatting instruction data",
+    # )
+    # lm_datasets.set_format(type="pt")
+    lm_datasets = encode_with_prompt_completion_format(raw_datasets, tokenizer, max_seq_length)
     return lm_datasets
 
 
 def get_encode_function(raw_datasets, tokenizer, max_seq_length, func="encode_with_messages_format"):
     """ get encode function based on the dataset. """
-    if "prompt" in raw_datasets.column_names and "completion" in raw_datasets.column_names:
+    if "prompt" in raw_datasets.columns and "completion" in raw_datasets.columns:
         encode_function = partial(
             encode_with_prompt_completion_format,
             tokenizer=tokenizer,
             max_seq_length=max_seq_length,
         )
-    elif "messages" in raw_datasets.column_names:
+    elif "messages" in raw_datasets.columns:
         if func == "encode_with_messages_format":
             encode_func = encode_with_messages_format
         else:
@@ -102,25 +121,25 @@ def encode_with_prompt_completion_format(example, tokenizer, max_seq_length):
     and it doesn't make sense to follow directly with the completion.
     '''
     # if prompt doesn't end with space and completion doesn't start with space, add space
-    if not example['prompt'].endswith((' ', '\n', '\t')) and not example['completion'].startswith((' ', '\n', '\t')):
-        example_text = example['prompt'] + ' ' + example['completion']
-    else:
-        example_text = example['prompt'] + example['completion']
-    example_text = example_text + tokenizer.eos_token
-    tokenized_example = tokenizer(
-        example_text, return_tensors='pt', max_length=max_seq_length, truncation=True)
+    # if not example['prompt'].endswith((' ', '\n', '\t')) and not example['completion'].startswith((' ', '\n', '\t')):
+    #     example_text = example['prompt'] + ' ' + example['completion']
+    # else:
+    #     example_text = example['prompt'] + example['completion']
+    example_text = example['data'] + tokenizer.eos_token
+    tokenized_example = tokenizer(example_text.to_list(), return_tensors='pt', max_length=max_seq_length, truncation=True, padding=True)
     input_ids = tokenized_example.input_ids
     labels = input_ids.clone()
     tokenized_prompt = tokenizer(
-        example['prompt'], return_tensors='pt', max_length=max_seq_length, truncation=True)
+        example['prompt'].to_list(), return_tensors='pt', max_length=max_seq_length, truncation=True, padding=True)
     # mask the prompt part for avoiding loss
     labels[:, :tokenized_prompt.input_ids.shape[1]] = -100
     attention_mask = torch.ones_like(input_ids)
-    return {
-        'input_ids': input_ids.flatten(),
-        'labels': labels.flatten(),
-        'attention_mask': attention_mask.flatten(),
-    }
+
+    return Dataset.from_dict({ 
+        'input_ids': input_ids,
+        'labels': labels,
+        'attention_mask': attention_mask,
+    })
 
 
 def encode_with_messages_format(example, tokenizer, max_seq_length):

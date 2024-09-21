@@ -1,8 +1,9 @@
 import json
 import os
 from typing import List, Tuple
-
+from datasets import load_dataset
 import pandas as pd
+import pickle
 import torch
 from datasets import Dataset
 from torch.utils.data import DataLoader
@@ -237,14 +238,14 @@ def get_mmlu_dataset(data_dir: str,
     Returns:
         Dataset: The tokenized dataset containing input_ids, attention_mask, and labels.
     """
-    mmlu_data_dir = os.path.join(data_dir, "eval", "mmlu")
-    subjects = sorted(
-        [
-            f.split("_test.csv")[0]
-            for f in os.listdir(os.path.join(mmlu_data_dir, "test"))
-            if "_test.csv" in f
-        ]
-    )
+    # mmlu_data_dir = os.path.join(data_dir, "eval", "mmlu")
+    # subjects = sorted(
+    #     [
+    #         f.split("_test.csv")[0]
+    #         for f in os.listdir(os.path.join(mmlu_data_dir, "test"))
+    #         if "_test.csv" in f
+    #     ]
+    # )
 
     def format_subject(subject):
         l = subject.split("_")
@@ -262,22 +263,27 @@ def get_mmlu_dataset(data_dir: str,
 
     def format_example(df, idx, include_answer=True):
         choices = ["A", "B", "C", "D"]
-        prompt = df.iloc[idx, 0]
-        k = df.shape[1] - 2
+        prompt = df.iloc[idx]['question']
+        k = len(df.iloc[idx]['choices'])
         for j in range(k):
-            prompt += "\n{}. {}".format(choices[j], df.iloc[idx, j + 1])
+            prompt += "\n{}. {}".format(choices[j], df.iloc[idx]['choices'][j])
         prompt += "\nAnswer:"
         return prompt
+
+    ds = load_dataset('cais/mmlu', 'all')['dev']
+    subjects = set(ds['subject'])
+    del ds
 
     k = 5
     dataset = {"input_ids": [], "attention_mask": [], "labels": []}
     for subject in subjects:
-        dev_df = pd.read_csv(
-            os.path.join(mmlu_data_dir, "dev", subject + "_dev.csv"), header=None
-        )[: k]
+        # dev_df = pd.read_csv(
+        #     os.path.join(mmlu_data_dir, "dev", subject + "_dev.csv"), header=None
+        # )[: k]
+        dev_df = load_dataset('cais/mmlu', subject)['dev'].to_pandas()
         for i in range(k):
             prompt = gen_prompt(dev_df, subject, i)
-            answer = " " + dev_df.iloc[i, dev_df.shape[1] - 2 + 1]
+            answer = " " + str(dev_df.iloc[i, dev_df.shape[1] - 2 + 1])
 
             if use_chat_format:
                 if chat_format == "tulu":
@@ -296,7 +302,7 @@ def get_mmlu_dataset(data_dir: str,
     return dataset
 
 
-def get_dataset(task, **kwargs):
+def get__dataset(task, **kwargs):
     """
     Get the dataset for the given task.
 
@@ -318,6 +324,76 @@ def get_dataset(task, **kwargs):
     else:
         raise ValueError("Invalid task name")
 
+import numpy as np
+
+
+def get_dataset(task, **kwargs):
+    """ get training dataset with a specified seed """
+    raw_datasets = load_raw_dataset(task)
+    lm_datasets = encode_data(
+        raw_datasets, kwargs['tokenizer'], 2048)
+    return lm_datasets
+
+
+def load_raw_dataset(train_files, sample_size=None, sample_percentage=1.0, seed=0):
+    """ load raw dataset """
+    if isinstance(train_files, str):
+        train_files = [train_files]
+    # processed_datasets = load_dataset(
+    #     "json",
+    #     data_files=train_files,
+    # )["train"]
+
+    def parse_prompt(data): 
+        ind = data.index("Output:")
+        return data[:ind].strip()
+    
+    def parse_completion(data): 
+        ind = data.index("Output:")
+        return data[ind+7:].strip()
+    
+    with open(train_files[0], 'rb') as f:
+        processed_datasets = pickle.load(f)[1]
+    
+    prompts = processed_datasets['data'].map(parse_prompt)
+    completions = processed_datasets['data'].map(parse_completion)
+    processed_datasets['prompt'] = prompts
+    processed_datasets['completion'] = completions
+    
+    if sample_size is None:
+        sample_size = max(200, int(len(processed_datasets) * sample_percentage))
+
+    if sample_size == len(processed_datasets):
+        return processed_datasets  # not shuffle
+
+    index = np.random.permutation(len(processed_datasets))[:sample_size]
+
+    sampled_dataset = processed_datasets.iloc[index]
+
+    return sampled_dataset
+
+def encode_data(raw_datasets, tokenizer, max_seq_length, processing_num_workers=10, overwrite_cache=False, func_name="encode_with_messages_format"):
+    """ encode data with the specified tokenizer and the chat format. """
+    lm_datasets = encode_with_prompt_completion_format(raw_datasets, tokenizer, max_seq_length)
+    return lm_datasets
+
+
+def encode_with_prompt_completion_format(example, tokenizer, max_seq_length):
+    example_text = example['data'] + tokenizer.eos_token
+    tokenized_example = tokenizer(example_text.to_list(), return_tensors='pt', max_length=max_seq_length, truncation=True, padding=True)
+    input_ids = tokenized_example.input_ids
+    labels = input_ids.clone()
+    tokenized_prompt = tokenizer(
+        example['prompt'].to_list(), return_tensors='pt', max_length=max_seq_length, truncation=True, padding=True)
+    # mask the prompt part for avoiding loss
+    labels[:, :tokenized_prompt.input_ids.shape[1]] = -100
+    attention_mask = torch.ones_like(input_ids)
+
+    return Dataset.from_dict({ 
+        'input_ids': input_ids,
+        'labels': labels,
+        'attention_mask': attention_mask,
+    })
 
 def get_dataloader(dataset, tokenizer, batch_size=1):
     data_collator = DataCollatorForSeq2Seq(

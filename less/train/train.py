@@ -110,7 +110,7 @@ def main():
 
     get_data_statistics(train_dataset)
 
-    if "dataset" in train_dataset.features:
+    if "dataset" in train_dataset.column_names:
         train_dataset = train_dataset.remove_columns(
             ["dataset", "id", "messages"])
             

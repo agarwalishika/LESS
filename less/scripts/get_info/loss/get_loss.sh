@@ -4,8 +4,8 @@ for task in mmlu bbh tydiqa; do
     data_dir=$n/space10/final/data
     # model=mistralai/Mistral-7B-v0.1
     # model_name=mistral-7b
-    model=meta-llama/Llama-2-13b-hf
-    model_name=llama-2-13b-hf
+    model=microsoft/Phi-3-mini-4k-instruct
+    model_name=Phi-3-mini-4k-instruct
     output_path=$n/space10/final/loss/${model_name}/$task/${model_name}
     if [[ ! -d $output_path ]]; then
         mkdir -p $output_path
@@ -17,7 +17,7 @@ for task in mmlu bbh tydiqa; do
 done
 
 # lora random selection
-base_model_name=llama-2-13b-hf
+base_model_name=Phi-3-mini-4k-instruct
 for task in mmlu bbh tydiqa; do
     for seed in 3 6 9; do
         for ckpt in 105 211 317 420; do

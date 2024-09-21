@@ -19,16 +19,15 @@ export base_training_args="--do_train True \
 --tf32 False \
 --fp16 False \
 --overwrite_output_dir True \
---report_to wandb \
 --optim adamw_torch \
 --seed 0 \
 --percentage 1.0 \
 --save_strategy epoch \
 --lora True \
---lora_r 128 \
---lora_alpha 512 \
+--lora_r 8 \
+--lora_alpha 32 \
 --lora_dropout 0.1 \
 --lora_target_modules q_proj k_proj v_proj o_proj \
 --learning_rate 2e-05 \
 --per_device_train_batch_size 1 \
---gradient_accumulation_steps 32"
+--gradient_accumulation_steps 1"

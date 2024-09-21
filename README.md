@@ -45,7 +45,7 @@ To enhance downstream performance from data selection, it's crucial to start wit
 
 ```bash 
 DATA_DIR=../data
-MODEL_PATH=meta-llama/Llama-2-7b-hf
+MODEL_PATH=microsoft/Phi-3-mini-4k-instruct
 PERCENTAGE=0.05 # percentage of the full data to train, you can specify the training file you want to use in the script
 DATA_SEED=3
 JOB_NAME=llama2-7b-p${PERCENTAGE}-lora-seed${DATA_SEED}
@@ -118,7 +118,7 @@ After selecting the data, you can use the following script to train the model wi
 TARGET_TASK_NAME="tydiqa"
 PERCENTAGE=0.05
 TRAIN_FILES=../selected_data/${TARGET_TASK_NAME}/top_p${PERCENTAGE}.jsonl
-MODEL_PATH=meta-llama/Llama-2-7b-hf
+MODEL_PATH=microsoft/Phi-3-mini-4k-instruct
 JOB_NAME=llama2-7b-less-p${PERCENTAGE}-lora
 
 ./less/scripts/train/lora_train.sh "$TRAIN_FILES" "$MODEL_PATH" "$JOB_NAME" 

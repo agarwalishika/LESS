@@ -129,9 +129,10 @@ def obtain_gradients_with_adam(model, batch, avg, avg_sq):
 
 def prepare_optimizer_state(model, optimizer_state, device):
     names = [n for n, p in model.named_parameters() if p.requires_grad]
-    avg = torch.cat([optimizer_state[n]["exp_avg"].view(-1) for n in names])
+    # import pdb; pdb.set_trace()
+    avg = torch.cat([optimizer_state[n]["exp_avg"].view(-1) for n in range(len(names))])
     avg_sq = torch.cat([optimizer_state[n]["exp_avg_sq"].view(-1)
-                       for n in names])
+                       for n in range(len(names))])
     avg = avg.to(device)
     avg_sq = avg_sq.to(device)
     return avg, avg_sq

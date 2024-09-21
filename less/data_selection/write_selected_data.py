@@ -1,8 +1,8 @@
 import argparse
 import os
-
+import pickle
 import torch
-
+import numpy as np
 
 def parse_args():
     argparser = argparse.ArgumentParser(
@@ -19,6 +19,8 @@ def parse_args():
                            default=None, help='The maximum number of samples')
     argparser.add_argument('--percentage', type=float, default=None,
                            help='The percentage of the data to be selected')
+    argparser.add_argument('--job_name', type=str, default="",
+                           help='the job name')
 
     args = argparser.parse_args()
 
@@ -87,17 +89,40 @@ if __name__ == "__main__":
         topk_scores, topk_indices = torch.topk(
             all_scores.float(), args.max_samples, dim=0, largest=True)
 
-        all_lines = []
-        for i, train_file in enumerate(args.train_files):
-            with open(train_file, 'r', encoding='utf-8', errors='ignore') as file:
-                all_lines.append(file.readlines()[:num_samples[i]])
+        # all_lines = []
+        # for i, train_file in enumerate(args.train_files):
+        #     with open(train_file, 'r', encoding='utf-8', errors='ignore') as file:
+        #         all_lines.append(file.readlines()[:num_samples[i]])
+
+        with open(train_file, 'rb') as f:
+            all_lines = pickle.load(f)
 
         final_index_list = sorted_index[:args.max_samples].tolist()
-        final_data_from = data_from[:args.max_samples].tolist()
-        with open(os.path.join(output_path, f"top_{data_amount_name}.jsonl"), 'w', encoding='utf-8', errors='ignore') as file:
-            for index, data_from in zip(final_index_list, final_data_from):
-                try:
-                    file.write(all_lines[data_from][index])
-                except:
-                    import pdb
-                    pdb.set_trace()
+
+        # import pdb; pdb.set_trace()
+
+
+        final_index_list = np.array(final_index_list)
+
+        def get_ind(i):
+            return all_lines[i].iloc[final_index_list[final_index_list < all_lines[i].shape[0]]]
+
+        train = get_ind(0)
+        valid = get_ind(1)
+        test = get_ind(2)
+
+        with open(os.path.join(args.output_path, args.job_name + ".pkl"), 'wb') as f:
+            pickle.dump((train, valid, test), f)
+
+        # final_index_list = sorted_index[:args.max_samples].tolist()
+        # final_data_from = data_from[:args.max_samples].tolist()
+        # with open(os.path.join(output_path, f"top_{data_amount_name}.jsonl"), 'w', encoding='utf-8', errors='ignore') as file:
+        #     for index, data_from in zip(final_index_list, final_data_from):
+        #         try:
+        #             import pdb; pdb.set_trace()
+        #             file.write(all_lines[data_from][index])
+        #         except:
+        #             import pdb
+        #             pdb.set_trace()
+    
+        
