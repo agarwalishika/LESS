@@ -53,7 +53,7 @@ rm -rf ../grads ../out ../selected_data
 
 ### QWEN EXPERIMENTS ###
 
-MODEL_PATH=Qwen/Qwen2-7B-Instruct
+MODEL_PATH=Qwen/Qwen2-72B-Instruct
 MODEL_NICKNAME=Qwen
 
 ## Use case 1: same dataset ##
