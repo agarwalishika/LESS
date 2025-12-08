@@ -6,7 +6,7 @@ from datasets import Dataset
 import numpy as np
 import torch
 from datasets import load_dataset
-
+import pandas as pd
 
 @contextlib.contextmanager
 def temp_seed(seed):
@@ -37,27 +37,36 @@ def load_raw_dataset(train_files: Union[List[str], str], sample_size=None, sampl
     #     data_files=train_files,
     # )["train"]
 
-    def parse_prompt(data): 
-        ind = data.index("Output:")
-        return data[:ind].strip()
+    # def parse_prompt(data): 
+    #     ind = data.index("Output:")
+    #     return data[:ind].strip()
     
-    def parse_completion(data): 
-        ind = data.index("Output:")
-        return data[ind+7:].strip()
+    # def parse_completion(data): 
+    #     ind = data.index("Output:")
+    #     return data[ind+7:].strip()
     
-    with open(train_files[0], 'rb') as f:
-        processed_datasets = pickle.load(f)[0]
+    # with open(train_files[0], 'rb') as f:
+    #     processed_datasets = pickle.load(f)[0]
     
-    prompts = processed_datasets['data'].map(parse_prompt)
-    completions = processed_datasets['data'].map(parse_completion)
-    processed_datasets['prompt'] = prompts
-    processed_datasets['completion'] = completions
+    # prompts = processed_datasets['data'].map(parse_prompt)
+    # completions = processed_datasets['data'].map(parse_completion)
+    # processed_datasets['prompt'] = prompts
+    # processed_datasets['completion'] = completions
     
-    if sample_size is None:
-        sample_size = max(200, int(len(processed_datasets) * sample_percentage))
+    sample_size = 1000
+    ds = load_dataset("llm-blender/mix-instruct")['train'].to_pandas()[:sample_size]
+    prompts = ds['instruction'] + " " + ds['input']
+    references = ds['output']
+    data = prompts + "\n##Answer: " + references
+
+    processed_datasets = pd.DataFrame({"prompt": prompts, "completion": references, "data": data})
+    
+    # if sample_size is None:
+    #     sample_size = max(1000, int(len(processed_datasets) * sample_percentage))
 
     if sample_size == len(processed_datasets):
         return processed_datasets  # not shuffle
+    0/0
 
     with temp_seed(seed):
         index = np.random.permutation(len(processed_datasets))[:sample_size]

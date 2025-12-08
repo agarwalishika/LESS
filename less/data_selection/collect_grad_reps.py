@@ -258,7 +258,7 @@ def collect_grads(dataloader,
         model.zero_grad()
 
         if count % project_interval == 0:
-            _project(full_grads, projected_grads)
+            # _project(full_grads, projected_grads)
             full_grads = []
 
         if count % save_interval == 0:
@@ -268,7 +268,7 @@ def collect_grads(dataloader,
             break
 
     if len(full_grads) > 0:
-        _project(full_grads, projected_grads)
+        # _project(full_grads, projected_grads)
         full_grads = []
 
     for dim in proj_dim:

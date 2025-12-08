@@ -114,6 +114,16 @@ if __name__ == "__main__":
         with open(os.path.join(args.output_path, args.job_name + ".pkl"), 'wb') as f:
             pickle.dump((train, valid, test), f)
 
+        def get_ind(i):
+            return final_index_list[final_index_list < all_lines[i].shape[0]]
+
+        train = get_ind(0)
+        valid = get_ind(1)
+        test = get_ind(2)
+
+        with open(os.path.join(args.output_path, args.job_name + "_indicies.pkl"), 'wb') as f:
+            pickle.dump((train, valid, test), f)
+
         # final_index_list = sorted_index[:args.max_samples].tolist()
         # final_data_from = data_from[:args.max_samples].tolist()
         # with open(os.path.join(output_path, f"top_{data_amount_name}.jsonl"), 'w', encoding='utf-8', errors='ignore') as file:
