@@ -6,7 +6,7 @@ from datasets import Dataset
 import numpy as np
 import torch
 from datasets import load_dataset
-
+import pandas as pd
 
 @contextlib.contextmanager
 def temp_seed(seed):
@@ -31,30 +31,29 @@ def get_training_dataset(train_files, tokenizer, max_seq_length, sample_percenta
 def load_raw_dataset(train_files: Union[List[str], str], sample_size=None, sample_percentage=1.0, seed=0):
     """ load raw dataset """    
     if isinstance(train_files, str):
-        train_files = [train_files]
-    # processed_datasets = load_dataset(
-    #     "json",
-    #     data_files=train_files,
-    # )["train"]
+        train_files = [train_files, 0]
+        
+    if "mix" in train_files[0]:
+        dataset_name = "llm-blender/mix-instruct"
+    elif "alpa" in train_files[0]:
+        dataset_name = "tatsu-lab/alpaca"
+    else:
+        dataset_name = "cais/mmlu"
+    
+    import sys
+    sys.path.append('/home/ishikaa2/learn_influence/')
+    from data_loader import Data
+    import pandas as pd
 
-    def parse_prompt(data): 
-        ind = data.index("Output:")
-        return data[:ind].strip()
+    data_loader = Data(dataset_name, dataset_name, 1000)
+    prompts = data_loader.existing_prompts
+    references = data_loader.existing_references
+    data = data_loader.existing_data
+
+    processed_datasets = pd.DataFrame({"prompt": prompts, "completion": references, "data": data})
     
-    def parse_completion(data): 
-        ind = data.index("Output:")
-        return data[ind+7:].strip()
-    
-    with open(train_files[0], 'rb') as f:
-        processed_datasets = pickle.load(f)[0]
-    
-    prompts = processed_datasets['data'].map(parse_prompt)
-    completions = processed_datasets['data'].map(parse_completion)
-    processed_datasets['prompt'] = prompts
-    processed_datasets['completion'] = completions
-    
-    if sample_size is None:
-        sample_size = max(200, int(len(processed_datasets) * sample_percentage))
+    # if sample_size is None:
+    #     sample_size = max(1000, int(len(processed_datasets) * sample_percentage))
 
     if sample_size == len(processed_datasets):
         return processed_datasets  # not shuffle

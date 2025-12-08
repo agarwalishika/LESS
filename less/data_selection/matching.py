@@ -76,12 +76,19 @@ for target_task_name in args.target_task_names:
                 calculate_influence_score(
                     training_info=training_info, validation_info=validation_info)
 
-        influence_score = influence_score.mean(-1)#.reshape(
+        # influence_score = influence_score.mean(-1)#.reshape(
             # influence_score.shape[0], N_SUBTASKS[target_task_name], -1).mean(-1).max(-1)[0]
-        output_dir = os.path.join(args.output_path, target_task_name)
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-        output_file = os.path.join(
-            args.output_path, target_task_name, f"{train_file_name}_influence_score.pt")
-        torch.save(influence_score, output_file)
+        # output_dir = os.path.join(args.output_path, target_task_name)
+        # if not os.path.exists(output_dir):
+        #     os.makedirs(output_dir)
+        # output_file = os.path.join(
+        #     args.output_path, target_task_name, f"{train_file_name}_influence_score.pt")
+        # torch.save(influence_score, output_file)
+        import sys
+        sys.path.append('/home/ishikaa2/learn_influence/')
+        import pickle
+        from config import utility_file, LESS_CONSTANT, PAIRWISE_CONSTANT
+        output_file = utility_file(LESS_CONSTANT, f'{target_task_name}|{target_task_name}', os.environ['GLOBAL_LANGUAGE_MODEL_NAME'], PAIRWISE_CONSTANT)
+        with open(os.path.join('/home/ishikaa2/learn_influence/', output_file), 'wb+') as f:
+            pickle.dump(influence_score, f)
         print("Saved influence score to {}".format(output_file))

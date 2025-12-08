@@ -2,18 +2,19 @@
 
 source less/scripts/train/base_training_args.sh
 
-train_files=$1
+data_dir=$1
 model_path=$2
 percentage=$3
 data_seed=$4
 job_name=$5
+length=$6
 
-output_dir=../out/${job_name}
+output_dir=./out/${job_name}
 if [[ ! -d $output_dir ]]; then
     mkdir -p $output_dir
 fi
 
-# train_files=("$data_dir/train/processed/dolly/dolly_data2.jsonl")
+train_files=("$data_dir", "$length")
 # train_files=("$data_dir/train/processed/flan_v2/flan_v2_data2.jsonl"
 #     "$data_dir/train/processed/cot/cot_data2.jsonl"
 #     "$data_dir/train/processed/dolly/dolly_data2.jsonl"
@@ -33,7 +34,7 @@ fi
 # train_files="llm-blender/mix-instruct"
 
 training_args="$base_training_args \
---model_name_or_path $model_path \
+--model_name_or_path $2 \
 --output_dir $output_dir \
 --percentage $percentage \
 --data_seed $data_seed \

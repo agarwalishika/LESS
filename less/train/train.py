@@ -64,7 +64,8 @@ def main():
     # Set seed before initializing model.
     set_seed(training_args.seed)
 
-    tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path)
+    tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path, trust_remote_code=True)
+    tokenizer.pad_token = tokenizer.eos_token
     # Load training dataset
     train_dataset = get_training_dataset(data_args.train_files,
                                          tokenizer=tokenizer,
@@ -73,7 +74,7 @@ def main():
                                          seed=data_args.sample_data_seed)
 
     model = AutoModelForCausalLM.from_pretrained(
-        model_args.model_name_or_path, torch_dtype=model_args.torch_dtype)
+        model_args.model_name_or_path, torch_dtype=torch.float16, trust_remote_code=True)
     add_padding_to_tokenizer(tokenizer)
 
     # resize embeddings if needed (e.g. for LlamaTokenizer)
@@ -92,7 +93,7 @@ def main():
             r=model_args.lora_r,
             lora_alpha=model_args.lora_alpha,
             lora_dropout=model_args.lora_dropout,
-            target_modules=model_args.lora_target_modules,
+            target_modules="all-linear",
         )
         model = get_peft_model(model, lora_config)
         logger.info(
@@ -110,7 +111,7 @@ def main():
 
     get_data_statistics(train_dataset)
 
-    if "dataset" in train_dataset.column_names:
+    if "dataset" in train_dataset.features:
         train_dataset = train_dataset.remove_columns(
             ["dataset", "id", "messages"])
             

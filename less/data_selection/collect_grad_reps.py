@@ -1,5 +1,6 @@
 import json
 import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '3'
 from hashlib import md5
 from typing import Iterable, List, Optional
 
@@ -129,7 +130,6 @@ def obtain_gradients_with_adam(model, batch, avg, avg_sq):
 
 def prepare_optimizer_state(model, optimizer_state, device):
     names = [n for n, p in model.named_parameters() if p.requires_grad]
-    # import pdb; pdb.set_trace()
     avg = torch.cat([optimizer_state[n]["exp_avg"].view(-1) for n in range(len(names))])
     avg_sq = torch.cat([optimizer_state[n]["exp_avg_sq"].view(-1)
                        for n in range(len(names))])
@@ -157,14 +157,14 @@ def collect_grads(dataloader,
         adam_optimizer_state (dict): The optimizer state of adam optimizers. If None, the gradients will be collected without considering Adam optimization states. 
         max_samples (int, optional): The maximum number of samples to collect. Defaults to None.
     """
-
+    
     model_id = 0  # model_id is used to draft the random seed for the projectors
     block_size = 128  # fixed block size for the projectors
-    projector_batch_size = 16  # batch size for the projectors
+    projector_batch_size = 10  # batch size for the projectors
     torch.random.manual_seed(0)  # set the random seed for torch
 
-    project_interval = 16  # project every 16 batches
-    save_interval = 160  # save every 160 batches
+    project_interval = 10  # project every 16 batches
+    save_interval = 100  # save every 160 batches
 
     def _project(current_full_grads, projected_grads):
         current_full_grads = torch.stack(current_full_grads).to(torch.float16)
@@ -232,7 +232,9 @@ def collect_grads(dataloader,
     full_grads = []  # full gradients
     projected_grads = {dim: [] for dim in proj_dim}  # projected gradients
 
-    for batch in tqdm(dataloader, total=len(dataloader)):
+    dataloader_len = len(dataloader)
+    max_samples = dataloader_len
+    for batch in tqdm(dataloader, total=dataloader_len):
         prepare_batch(batch)
         count += 1
 
@@ -257,11 +259,11 @@ def collect_grads(dataloader,
         full_grads.append(vectorized_grads)
         model.zero_grad()
 
-        if count % project_interval == 0:
+        if count % project_interval == 0 or count == dataloader_len - 1:
             _project(full_grads, projected_grads)
             full_grads = []
 
-        if count % save_interval == 0:
+        if count % save_interval == 0 or count == dataloader_len - 1:
             _save(projected_grads, output_dirs)
 
         if max_samples is not None and count == max_samples:
@@ -289,6 +291,7 @@ def merge_and_normalize_info(output_dir: str, prefix="reps"):
     info = [file for file in info if file.startswith(prefix)]
     # Sort the files in ascending order
     info.sort(key=lambda x: int(x.split(".")[0].split("-")[1]))
+    
     merged_data = []
     for file in info:
         data = torch.load(os.path.join(output_dir, file))

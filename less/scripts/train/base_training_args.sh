@@ -11,7 +11,6 @@ export base_training_args="--do_train True \
 --lr_scheduler_type linear \
 --warmup_ratio 0.03 \
 --weight_decay 0.0 \
---evaluation_strategy no \
 --logging_steps 1 \
 --save_strategy no \
 --num_train_epochs 4 \

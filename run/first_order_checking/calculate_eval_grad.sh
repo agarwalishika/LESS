@@ -13,7 +13,7 @@ cd /scratch/gpfs/mengzhou/space10/final/DIGSIT
 task=$1
 
 for step in {1..105}; do
-    data_dir=../data
+    data_dir=./data
     model_dir=$n/space10/out/46_train_for_analysis/p0.05_seed3_lora/
     output_path=${model_dir}/eval_sgd_grad/${task}/step${step} # path to output
     model=${model_dir}/checkpoint-${step} # path to model

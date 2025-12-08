@@ -99,9 +99,6 @@ if __name__ == "__main__":
 
         final_index_list = sorted_index[:args.max_samples].tolist()
 
-        # import pdb; pdb.set_trace()
-
-
         final_index_list = np.array(final_index_list)
 
         def get_ind(i):
@@ -112,6 +109,16 @@ if __name__ == "__main__":
         test = get_ind(2)
 
         with open(os.path.join(args.output_path, args.job_name + ".pkl"), 'wb') as f:
+            pickle.dump((train, valid, test), f)
+
+        def get_ind(i):
+            return final_index_list[final_index_list < all_lines[i].shape[0]]
+
+        train = get_ind(0)
+        valid = get_ind(1)
+        test = get_ind(2)
+
+        with open(os.path.join(args.output_path, args.job_name + "_indicies.pkl"), 'wb') as f:
             pickle.dump((train, valid, test), f)
 
         # final_index_list = sorted_index[:args.max_samples].tolist()

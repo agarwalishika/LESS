@@ -203,7 +203,7 @@ def load_hf_lm_and_tokenizer(
     from peft import PeftConfig, PeftModel
     
     if is_peft:
-        peft_config = PeftConfig.from_pretrained(model_name_or_path)
+        peft_config = PeftConfig.from_pretrained(model_name_or_path, trust_remote_code=True)
         peft_dir = model_name_or_path
         model_name_or_path = peft_config.base_model_name_or_path
         
@@ -217,18 +217,18 @@ def load_hf_lm_and_tokenizer(
         model = AutoModelForCausalLM.from_pretrained(
             model_name_or_path, 
             device_map=device_map, 
-            load_in_8bit=True
+            load_in_8bit=True, trust_remote_code=True
         )
     else:
         if device_map:
-            model = AutoModelForCausalLM.from_pretrained(model_name_or_path, device_map=device_map, torch_dtype=None)
+            model = AutoModelForCausalLM.from_pretrained(model_name_or_path, device_map=device_map, torch_dtype=None, trust_remote_code=True)
         else:
-            model = AutoModelForCausalLM.from_pretrained(model_name_or_path, torch_dtype=torch_dtype)
+            model = AutoModelForCausalLM.from_pretrained(model_name_or_path, torch_dtype=torch_dtype, trust_remote_code=True)
             if torch.cuda.is_available():
                 model = model.cuda()
         
         if is_peft:
-            model = PeftModel.from_pretrained(model, peft_dir, device_map="auto").merge_and_unload()
+            model = PeftModel.from_pretrained(model, peft_dir, device_map="auto", trust_remote_code=True).merge_and_unload()
             print(f"loaded the peft model") 
          
         if convert_to_half:
@@ -251,10 +251,10 @@ def load_hf_lm_and_tokenizer(
         else:
             tokenizer_name_or_path = model_name_or_path
     try:
-        tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, use_fast=use_fast_tokenizer)
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, use_fast=use_fast_tokenizer, trust_remote_code=True)
     except:
         # some tokenizers (e.g., GPTNeoXTokenizer) don't have the slow or fast version, so we just roll back to the default one
-        tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path)
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, trust_remote_code=True)
 
     # set padding side to left for batch generation
     tokenizer.padding_side = padding_side

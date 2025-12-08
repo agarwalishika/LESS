@@ -344,24 +344,42 @@ def load_raw_dataset(train_files, sample_size=None, sample_percentage=1.0, seed=
     #     data_files=train_files,
     # )["train"]
 
-    def parse_prompt(data): 
-        ind = data.index("Output:")
-        return data[:ind].strip()
+    # def parse_prompt(data): 
+    #     ind = data.index("Output:")
+    #     return data[:ind].strip()
     
-    def parse_completion(data): 
-        ind = data.index("Output:")
-        return data[ind+7:].strip()
+    # def parse_completion(data): 
+    #     ind = data.index("Output:")
+    #     return data[ind+7:].strip()
     
-    with open(train_files[0], 'rb') as f:
-        processed_datasets = pickle.load(f)[1]
+    # with open(train_files[0], 'rb') as f:
+    #     processed_datasets = pickle.load(f)[1]
     
-    prompts = processed_datasets['data'].map(parse_prompt)
-    completions = processed_datasets['data'].map(parse_completion)
-    processed_datasets['prompt'] = prompts
-    processed_datasets['completion'] = completions
+    # prompts = processed_datasets['data'].map(parse_prompt)
+    # completions = processed_datasets['data'].map(parse_completion)
+    # processed_datasets['prompt'] = prompts
+    # processed_datasets['completion'] = completions
+        
+    if "mix" in train_files[0]:
+        dataset_name = "llm-blender/mix-instruct"
+    elif "alpa" in train_files[0]:
+        dataset_name = "tatsu-lab/alpaca"
+    else:
+        dataset_name = "cais/mmlu"
+    import sys
+    sys.path.append('/home/ishikaa2/learn_influence/')
+    from data_loader import Data
+    import pandas as pd
+
+    data_loader = Data(dataset_name, dataset_name, 1000)
+    prompts = data_loader.new_prompts
+    references = data_loader.new_references
+    data = data_loader.new_data
+
+    processed_datasets = pd.DataFrame({"prompt": prompts, "completion": references, "data": data})
     
-    if sample_size is None:
-        sample_size = max(200, int(len(processed_datasets) * sample_percentage))
+    # if sample_size is None:
+    #     sample_size = max(200, int(len(processed_datasets) * sample_percentage))
 
     if sample_size == len(processed_datasets):
         return processed_datasets  # not shuffle
