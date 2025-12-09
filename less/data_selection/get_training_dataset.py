@@ -29,27 +29,18 @@ def get_training_dataset(train_files, tokenizer, max_seq_length, sample_percenta
 
 
 def load_raw_dataset(train_files: Union[List[str], str], sample_size=None, sample_percentage=1.0, seed=0):
-    """ load raw dataset """    
-    if isinstance(train_files, str):
-        train_files = [train_files, 0]
-        
-    if "mix" in train_files[0]:
-        dataset_name = "llm-blender/mix-instruct"
-    elif "alpa" in train_files[0]:
-        dataset_name = "tatsu-lab/alpaca"
-    else:
-        dataset_name = "cais/mmlu"
-    
-    import sys
-    sys.path.append('/home/ishikaa2/learn_influence/')
-    from data_loader import Data
+    """ load raw dataset """
+    if isinstance(train_files, list):
+        train_files = train_files[0]
+
+    train_files = train_files.replace(',', '')
+
     import pandas as pd
-
-    data_loader = Data(dataset_name, dataset_name, 1000)
-    prompts = data_loader.existing_prompts
-    references = data_loader.existing_references
-    data = data_loader.existing_data
-
+    df = pd.read_json(train_files)
+    prompts = list(df['question'])
+    references = list(df['solution'])
+    data = list(df.apply(lambda x: f"Question: {x['question']}\nSolution: {x['solution']}\nFinal Answer: {x['answer']}", axis=1))
+    
     processed_datasets = pd.DataFrame({"prompt": prompts, "completion": references, "data": data})
     
     # if sample_size is None:

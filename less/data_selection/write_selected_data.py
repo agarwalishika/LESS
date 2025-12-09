@@ -3,6 +3,7 @@ import os
 import pickle
 import torch
 import numpy as np
+from pathlib import Path
 
 def parse_args():
     argparser = argparse.ArgumentParser(
@@ -73,63 +74,68 @@ if __name__ == "__main__":
                               * i for i, line_num in enumerate(num_samples)]).to(device)
         sorted_scores, sorted_index = torch.sort(
             all_scores, dim=0, descending=True)
-        sorted_score_file = os.path.join(output_path, f"sorted.csv")
-
-        data_from = data_from[sorted_index]
-        sorted_index = file_specific_index[sorted_index]
-        
-
-        if not os.path.exists(sorted_score_file):
-            with open(sorted_score_file, 'w', encoding='utf-8') as file:
-                file.write("file name, index, score\n")
-                for score, index, name in zip(sorted_scores, sorted_index, data_from):
-                    file.write(
-                        f"{args.train_file_names[name.item()]}, {index.item()}, {round(score.item(), 6)}\n")
-
-        topk_scores, topk_indices = torch.topk(
-            all_scores.float(), args.max_samples, dim=0, largest=True)
-
-        # all_lines = []
-        # for i, train_file in enumerate(args.train_files):
-        #     with open(train_file, 'r', encoding='utf-8', errors='ignore') as file:
-        #         all_lines.append(file.readlines()[:num_samples[i]])
-
-        with open(train_file, 'rb') as f:
-            all_lines = pickle.load(f)
-
         final_index_list = sorted_index[:args.max_samples].tolist()
 
-        final_index_list = np.array(final_index_list)
+        import json
+        with open(train_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        selected_data = [data[i] for i in final_index_list]
 
-        def get_ind(i):
-            return all_lines[i].iloc[final_index_list[final_index_list < all_lines[i].shape[0]]]
+        output_folder = "/home/ishikaa2/thermostat/LESS_selected_data"
+        saved_data_output_file = os.path.join(output_folder, f"{args.job_name}-{args.max_samples}.json")
+        print(f"Saving selected data to: {saved_data_output_file}")
+        with open(saved_data_output_file, "w+", encoding="utf-8") as f:
+            json.dump(selected_data, f, indent=4)
+        
+        # topk_scores, topk_indices = torch.topk(
+        #     all_scores.float(), args.max_samples, dim=0, largest=True)
 
-        train = get_ind(0)
-        valid = get_ind(1)
-        test = get_ind(2)
+        # # all_lines = []
+        # # for i, train_file in enumerate(args.train_files):
+        # #     with open(train_file, 'r', encoding='utf-8', errors='ignore') as file:
+        # #         all_lines.append(file.readlines()[:num_samples[i]])
 
-        with open(os.path.join(args.output_path, args.job_name + ".pkl"), 'wb') as f:
-            pickle.dump((train, valid, test), f)
-
-        def get_ind(i):
-            return final_index_list[final_index_list < all_lines[i].shape[0]]
-
-        train = get_ind(0)
-        valid = get_ind(1)
-        test = get_ind(2)
-
-        with open(os.path.join(args.output_path, args.job_name + "_indicies.pkl"), 'wb') as f:
-            pickle.dump((train, valid, test), f)
+        # with open(train_file, 'rb') as f:
+        #     all_lines = pickle.load(f)
+        
+        # import json
+        # with open(train_file, 'r', encoding='utf-8') as f:
+        #     all_lines = json.load(f)
 
         # final_index_list = sorted_index[:args.max_samples].tolist()
-        # final_data_from = data_from[:args.max_samples].tolist()
-        # with open(os.path.join(output_path, f"top_{data_amount_name}.jsonl"), 'w', encoding='utf-8', errors='ignore') as file:
-        #     for index, data_from in zip(final_index_list, final_data_from):
-        #         try:
-        #             import pdb; pdb.set_trace()
-        #             file.write(all_lines[data_from][index])
-        #         except:
-        #             import pdb
-        #             pdb.set_trace()
+
+        # final_index_list = np.array(final_index_list)
+
+        # def get_ind(i):
+        #     return all_lines[i].iloc[final_index_list[final_index_list < all_lines[i].shape[0]]]
+
+        # train = get_ind(0)
+        # valid = get_ind(1)
+        # test = get_ind(2)
+
+        # with open(os.path.join(args.output_path, args.job_name + ".pkl"), 'wb') as f:
+        #     pickle.dump((train, valid, test), f)
+
+        # def get_ind(i):
+        #     return final_index_list[final_index_list < all_lines[i].shape[0]]
+
+        # train = get_ind(0)
+        # valid = get_ind(1)
+        # test = get_ind(2)
+
+        # with open(os.path.join(args.output_path, args.job_name + "_indicies.pkl"), 'wb') as f:
+        #     pickle.dump((train, valid, test), f)
+
+        # # final_index_list = sorted_index[:args.max_samples].tolist()
+        # # final_data_from = data_from[:args.max_samples].tolist()
+        # # with open(os.path.join(output_path, f"top_{data_amount_name}.jsonl"), 'w', encoding='utf-8', errors='ignore') as file:
+        # #     for index, data_from in zip(final_index_list, final_data_from):
+        # #         try:
+        # #             import pdb; pdb.set_trace()
+        # #             file.write(all_lines[data_from][index])
+        # #         except:
+        # #             import pdb
+        # #             pdb.set_trace()
     
         

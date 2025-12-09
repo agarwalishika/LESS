@@ -315,6 +315,7 @@ def get__dataset(task, **kwargs):
     Returns:
         Dataset: The dataset.
     """
+    0/0
     if task == "bbh":
         return get_bbh_dataset(**kwargs)
     elif task == "tydiqa":
@@ -337,44 +338,15 @@ def get_dataset(task, **kwargs):
 
 def load_raw_dataset(train_files, sample_size=None, sample_percentage=1.0, seed=0):
     """ load raw dataset """
-    if isinstance(train_files, str):
-        train_files = [train_files]
-    # processed_datasets = load_dataset(
-    #     "json",
-    #     data_files=train_files,
-    # )["train"]
+    if isinstance(train_files, list):
+        train_files = train_files[0]
+    train_files = train_files.replace(',', '')
 
-    # def parse_prompt(data): 
-    #     ind = data.index("Output:")
-    #     return data[:ind].strip()
-    
-    # def parse_completion(data): 
-    #     ind = data.index("Output:")
-    #     return data[ind+7:].strip()
-    
-    # with open(train_files[0], 'rb') as f:
-    #     processed_datasets = pickle.load(f)[1]
-    
-    # prompts = processed_datasets['data'].map(parse_prompt)
-    # completions = processed_datasets['data'].map(parse_completion)
-    # processed_datasets['prompt'] = prompts
-    # processed_datasets['completion'] = completions
-        
-    if "mix" in train_files[0]:
-        dataset_name = "llm-blender/mix-instruct"
-    elif "alpa" in train_files[0]:
-        dataset_name = "tatsu-lab/alpaca"
-    else:
-        dataset_name = "cais/mmlu"
-    import sys
-    sys.path.append('/home/ishikaa2/learn_influence/')
-    from data_loader import Data
     import pandas as pd
-
-    data_loader = Data(dataset_name, dataset_name, 1000)
-    prompts = data_loader.new_prompts
-    references = data_loader.new_references
-    data = data_loader.new_data
+    df = pd.read_json(train_files)
+    prompts = list(df['question'])
+    references = list(df['solution'])
+    data = list(df.apply(lambda x: f"Question: {x['question']}\nSolution: {x['solution']}\nFinal Answer: {x['answer']}", axis=1))
 
     processed_datasets = pd.DataFrame({"prompt": prompts, "completion": references, "data": data})
     

@@ -30,3 +30,12 @@ CHECKPOINT_WEIGHTS="1.6877e-05" # average lr of the epoch
 VALIDATION_GRADIENT_PATH=./grads/${JOB_NAME}/${TRAINING_DATA_NAME}-ckpt${CKPT}-adam/dim8192
 
 ./less/scripts/data_selection/matching.sh "$GRADIENT_PATH" "$TRAINING_DATA_NAME" "$CKPTS" "$CHECKPOINT_WEIGHTS" "$VALIDATION_GRADIENT_PATH" "$TARGET_TASK_NAMES" "$SELECTED_DATA_OUTPUT_PATH"
+
+
+python3 -m less.data_selection.write_selected_data \
+--target_task_names ${TARGET_TASK_NAMES} \
+--train_file_names ${TRAINING_DATA_NAME} \
+--train_files ${DATA_DIR} \
+--output_path $SELECTED_DATA_OUTPUT_PATH \
+--max_samples 10 \
+--job_name ${JOB_NAME}
